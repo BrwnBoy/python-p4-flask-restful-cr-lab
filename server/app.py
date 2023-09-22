@@ -1,27 +1,35 @@
 #!/usr/bin/env python3
 
-from flask import Flask, jsonify, request, make_response
-from flask_migrate import Migrate
-from flask_restful import Api, Resource
-
+from flask import Flask, request, jsonify
 from models import db, Plant
 
 app = Flask(__name__)
-app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///plants.db'
+app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///app.db'  # adjust this if necessary
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
-app.json.compact = True
 
-migrate = Migrate(app, db)
 db.init_app(app)
 
-api = Api(app)
+@app.route('/plants', methods=['GET', 'POST'])
+def handle_plants():
+    if request.method == 'POST':
+        new_plant = Plant(
+            name=request.json.get('name'),
+            image=request.json.get('image'),
+            price=request.json.get('price')
+        )
+        db.session.add(new_plant)
+        db.session.commit()
 
-class Plants(Resource):
-    pass
+        return jsonify(new_plant.to_dict()), 201
 
-class PlantByID(Resource):
-    pass
-        
+    else:
+        plants = Plant.query.all()
+        return jsonify([plant.to_dict() for plant in plants]), 200
+
+@app.route('/plants/<int:id>', methods=['GET'])
+def handle_plant(id):
+    plant = Plant.query.get(id)
+    return jsonify(plant.to_dict()), 200
 
 if __name__ == '__main__':
-    app.run(port=5555, debug=True)
+    app.run(port=5000, debug=True)
